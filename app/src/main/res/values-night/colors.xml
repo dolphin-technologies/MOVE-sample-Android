@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="move_text_dark">#F8ECD0</color>
+    <color name="move_text_light">#a5a5a5</color>
+
+    <color name="section_bg">#4D4D4D</color>
+
+</resources>

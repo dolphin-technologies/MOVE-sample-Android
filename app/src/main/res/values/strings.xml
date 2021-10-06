@@ -1,0 +1,48 @@
+<resources>
+
+    <string name="app_name">MOVE</string>
+
+    <string name="state_current">CURRENT STATE</string>
+    <string name="state_active">RECORDING</string>
+    <string name="state_error">ERROR</string>
+    <string name="state_inactive">NOT RECORDING</string>
+
+    <string name="notification_recognition">Recognition Notification</string>
+    <string name="notification_driving">Driving Notification</string>
+    <string name="waiting_for_trip">Waiting for trip</string>
+    <string name="trip_active">Trip active</string>
+
+    <string name="sdk_ready">ready</string>
+    <string name="sdk_running">running</string>
+    <string name="sdk_error">error</string>
+    <string name="sdk_uninitialised">uninitialised</string>
+
+    <string name="sdk_trip_state_driving">driving</string>
+    <string name="sdk_trip_state_halt">halt</string>
+    <string name="sdk_trip_state_idle">idle</string>
+    <string name="sdk_trip_state_ignored">ignored</string>
+    <string name="sdk_trip_state_unknown">unknown</string>
+
+    <string name="not_registered">not registered</string>
+
+    <string name="sdk_state">SDK State: </string>
+    <string name="sdk_trip_state">SDK Trip State: </string>
+    <string name="sdk_contract_id">Your contract ID: </string>
+    <string name="sdk_init_error">Initialization Error - Please check your network connection and start the app again!</string>
+
+    <string name="permissions_header">PERMISSIONS</string>
+    <string name="permissions_text">MOVE needs the following permissions to record your activities. Please check each one and grant them.</string>
+    <string name="permission_location">LOCATION</string>
+    <string name="permissions_location_text">MOVE needs the permission to receive the location of your device.</string>
+    <string name="permission_background_location">BACKGROUND LOCATION</string>
+    <string name="permissions_background_text">Locations need to be fetched even if the app is in the background (always enabled).</string>
+    <string name="permission_activity_recognition">MOTION</string>
+    <string name="permissions_activity_text">In order to record walking activities, please grant access to your fitness &amp; motion data.</string>
+    <string name="permission_read_phone_state">READ PHONE STATE</string>
+    <string name="permissions_read_phone_text">We use this to detect whether you are using the phone (phone call) while driving.</string>
+    <string name="permission_draw_overlays">OVERLAYS</string>
+    <string name="permissions_draw_overlay_text">We use this to detect whether you are using the phone (swipe+type) while driving.</string>
+    <string name="permission_battery_optimization">BATTERY OPTIMIZATION</string>
+    <string name="permissions_battery_optimization_text">To recognize your trips in the background, it is necessary to allow the deactivation of the native battery optimization.</string>
+
+</resources>

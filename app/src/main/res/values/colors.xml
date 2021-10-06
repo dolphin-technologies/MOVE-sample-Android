@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="theme_primary">#ff07132f</color>
+    <color name="status_bar">#ff07132f</color>
+    <color name="white">#ffffffff</color>
+
+    <color name="move_text_dark">#ff07132f</color>
+    <color name="move_text_light">#ff5a5a5a</color>
+    <color name="move_text_error">#ffff0000</color>
+
+    <color name="section_bg">#fff2f3f4</color>
+
+    <color name="color_switch_on">#ffa5db76</color>
+    <color name="color_switch_off">#ff585858</color>
+
+</resources>
