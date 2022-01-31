@@ -177,12 +177,15 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
             .timelineDetectionService(
                 TimelineDetectionService.DRIVING,
                 TimelineDetectionService.WALKING,
-                TimelineDetectionService.BICYCLE
+                TimelineDetectionService.BICYCLE,
+                TimelineDetectionService.PLACES,
+                TimelineDetectionService.PUBLIC_TRANSPORT,
             )
             .drivingServices(DrivingService.DistractionFreeDriving, DrivingService.DrivingBehaviour)
             .otherServices(OtherService.PointsOfInterest)   // Enter this line to activate the POI service feature. Please see also the MOVE SDK Wiki.
             .recognitionNotification(recognitionNotification)
-            .tripNotification(drivingNotification)    // If the device is on a trip you can show an other notification icon.
+            .tripNotification(drivingNotification)    // If the device is on a trip you can show an other notification icon.,
+            .walkingLocationNotification(recognitionNotification) // notification for places and walking path
             .sdkStateListener(sdkStateListener)
             .tripStateListener(tripStateListener)
             .authStateUpdateListener(authStateListener)
