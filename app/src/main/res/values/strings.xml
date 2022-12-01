@@ -27,7 +27,7 @@
 
     <string name="sdk_state">SDK State: </string>
     <string name="sdk_trip_state">SDK Trip State: </string>
-    <string name="sdk_contract_id">Your contract ID: </string>
+    <string name="sdk_user_id">Your user ID: </string>
     <string name="sdk_init_error">Initialization Error - Please check your network connection and start the app again!</string>
 
     <string name="permissions_header">PERMISSIONS</string>
@@ -44,5 +44,12 @@
     <string name="permissions_draw_overlay_text">We use this to detect whether you are using the phone (swipe+type) while driving.</string>
     <string name="permission_battery_optimization">BATTERY OPTIMIZATION</string>
     <string name="permissions_battery_optimization_text">To recognize your trips in the background, it is necessary to allow the deactivation of the native battery optimization.</string>
+
+    <string name="button_call_assistance_text">Call Assistance</string>
+    <string name="button_update_config_text">Update config</string>
+    <string name="permissions_notification_text">MOVE needs the permission to show the current SDK state notification.</string>
+    <string name="permission_notification">NOTIFICATIONS</string>
+    <string name="permission_bluetooth">BLUETOOTH</string>
+    <string name="permission_bluetooth_text">MOVE needs the permission to communicate with already-paired Bluetooth devices</string>
 
 </resources>

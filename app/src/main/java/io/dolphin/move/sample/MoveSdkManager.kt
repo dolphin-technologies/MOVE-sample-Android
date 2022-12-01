@@ -28,9 +28,9 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import io.dolphin.move.*
 import io.dolphin.move.sample.MoveSampleApplication.Companion.PREF_ACCESS_TOKEN
-import io.dolphin.move.sample.MoveSampleApplication.Companion.PREF_CONTRACT_ID
 import io.dolphin.move.sample.MoveSampleApplication.Companion.PREF_REFRESH_TOKEN
 import io.dolphin.move.sample.MoveSampleApplication.Companion.PREF_SHARED_NAME
+import io.dolphin.move.sample.MoveSampleApplication.Companion.PREF_USER_ID
 import io.dolphin.move.sample.backend.MoveBackendApi
 import io.dolphin.move.sample.backend.RegisterRequest
 import io.dolphin.move.sample.backend.RegisterResponse
@@ -56,11 +56,6 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
         private const val TAG = "MoveSdkManager"
     }
 
-    init {
-        Log.i(TAG, "Running MOVE SDK version ${MoveSdk.version}")
-    }
-
-    private val moveSdkBuilder: MoveSdk.Builder
     private var moveAuth: MoveAuth? = null
     internal var moveSdk: MoveSdk? = null
 
@@ -68,6 +63,9 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
     private val moveAuthStateFlow = MutableStateFlow<MoveAuthState>(MoveAuthState.UNKNOWN)
     private val moveTripStateFlow = MutableStateFlow(MoveTripState.UNKNOWN)
     private val moveConfigErrorFlow = MutableStateFlow<MoveConfigurationError?>(null)
+    private val moveErrorsFlow = MutableStateFlow<List<MoveServiceFailure>>(emptyList())
+    private val moveWarningsFlow = MutableStateFlow<List<MoveServiceWarning>>(emptyList())
+    private val assistanceStateFlow = MutableStateFlow<AssistanceCallState?>(null)
 
     fun fetchMoveStateFlow(): StateFlow<MoveSdkState> {
         return moveStateFlow
@@ -79,6 +77,18 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
 
     fun fetchConfigErrorFlow(): StateFlow<MoveConfigurationError?> {
         return moveConfigErrorFlow
+    }
+
+    fun fetchErrorsFlow(): StateFlow<List<MoveServiceFailure>> {
+        return moveErrorsFlow
+    }
+
+    fun fetchWarningsFlow(): StateFlow<List<MoveServiceWarning>> {
+        return moveWarningsFlow
+    }
+
+    fun fetchAssistanceStateFlow(): StateFlow<AssistanceCallState?> {
+        return assistanceStateFlow
     }
 
     private var initListener: MoveSdk.InitializeListener = object : MoveSdk.InitializeListener {
@@ -116,17 +126,9 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
 
         override fun onStateChanged(sdk: MoveSdk, state: MoveSdkState) {
             moveStateFlow.value = state
-            if (state is MoveSdkState.Error) {
-                val reason = state.reason
-                Log.w("MoveSdkState", "MOVE SDK reported an error: ${reason::class.simpleName}")
-            } else {
-                Log.d("MoveSdkState", state::class.simpleName.toString())
-            }
-
             // If we received ready, we directly go to running
             if (state == MoveSdkState.Ready &&
                 lastState == MoveSdkState.Uninitialised
-                || lastState is MoveSdkState.Error
             ) {
                 moveSdk?.startAutomaticDetection()
             }
@@ -150,7 +152,7 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
             when (state) {
                 is MoveAuthState.EXPIRED -> {
                     // Latest MoveAuth expired and the SDK can't refresh it.
-                    // Requesting new Auth using the product's API Key and then passing it to the SDK.
+                    // Requesting new Auth using the project's API Key and then passing it to the SDK.
                     registerUser()
                 }
                 is MoveAuthState.VALID -> {
@@ -163,34 +165,98 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
         }
     }
 
+    private val warningListener = object : MoveSdk.MoveWarningListener {
+        override fun onMoveWarning(serviceWarnings: List<MoveServiceWarning>) {
+            moveWarningsFlow.value = serviceWarnings
+            serviceWarnings.forEach { moveServiceWarning ->
+                moveServiceWarning.warnings.forEach { moveWarning ->
+                    Log.w(
+                        TAG,
+                        "${moveServiceWarning.service?.name().orEmpty()} - ${moveWarning.name}"
+                    )
+                }
+            }
+        }
+    }
+
+    private val errorListener = object : MoveSdk.MoveErrorListener {
+        override fun onMoveError(serviceFailures: List<MoveServiceFailure>) {
+            moveErrorsFlow.value = serviceFailures
+            serviceFailures.forEach { moveServiceFailure ->
+                moveServiceFailure.reasons.forEach { reasons ->
+                    Log.e(TAG, "${moveServiceFailure.service.name()} - ${reasons.name}")
+                }
+            }
+        }
+    }
+
+    private val assistanceListener = object : MoveSdk.AssistanceStateListener {
+        override fun onAssistanceStateChanged(assistanceState: AssistanceCallState) {
+            assistanceStateFlow.value = assistanceState
+            Log.d("AssistanceCallState", assistanceState.name)
+        }
+
+    }
+
     init {
-        moveSdkBuilder = buildMoveSdk()
+        Log.i(TAG, "Running MOVE SDK version ${MoveSdk.version}")
     }
 
     @SuppressLint("MissingPermission")
-    private fun buildMoveSdk(): MoveSdk.Builder {
-        // Let's build the MoveSdk and register all the listeners for your usage.
+    private fun configureMoveSdk(moveAuth: MoveAuth) {
+        // Let's configure the MoveSdk and register all the listeners for your usage.
         // see -> MoveSdk Wiki / Initializing the MOVE SDK
+        moveSdk = MoveSdk.init(context)
         val recognitionNotification = createRecognitionNotification(context)
         val drivingNotification = createDrivingNotification(context)
-        return MoveSdk.Builder()
-            .timelineDetectionService(
-                TimelineDetectionService.DRIVING,
-                TimelineDetectionService.WALKING,
-                TimelineDetectionService.BICYCLE,
-                TimelineDetectionService.PLACES,
-                TimelineDetectionService.PUBLIC_TRANSPORT,
-            )
-            .drivingServices(DrivingService.DistractionFreeDriving, DrivingService.DrivingBehaviour)
-            .otherServices(OtherService.PointsOfInterest)   // Enter this line to activate the POI service feature. Please see also the MOVE SDK Wiki.
-            .recognitionNotification(recognitionNotification)
-            .tripNotification(drivingNotification)    // If the device is on a trip you can show an other notification icon.,
-            .walkingLocationNotification(recognitionNotification) // notification for places and walking path
-            .sdkStateListener(sdkStateListener)
-            .tripStateListener(tripStateListener)
-            .authStateUpdateListener(authStateListener)
-            .initializationListener(initListener)
-            .allowMockLocations(BuildConfig.DEBUG)    // mock location not recommended for use in production
+
+        val moveConfig = createMoveConfig()
+        moveSdk?.run {
+            recognitionNotification(recognitionNotification)
+            tripNotification(drivingNotification) // If the device is on a trip you can show an other notification icon.,
+            walkingLocationNotification(recognitionNotification) // notification for places and walking path
+            sdkStateListener(sdkStateListener)
+            tripStateListener(tripStateListener)
+            authStateUpdateListener(authStateListener)
+            initializationListener(initListener)
+            setServiceWarningListener(warningListener)
+            setServiceErrorListener(errorListener)
+            consoleLogging(true)
+            allowMockLocations(BuildConfig.DEBUG) // mock location not recommended for use in production
+        }
+        MoveSdk.setup(moveAuth, moveConfig, start = true)
+    }
+
+    private fun createMoveConfig(): MoveConfig {
+        // MoveSdk services configuration
+        val moveDetectionServices: MutableSet<MoveDetectionService> = mutableSetOf()
+
+        val drivingServices: MutableSet<DrivingService> = mutableSetOf()
+        val walkingServices: MutableSet<WalkingService> = mutableSetOf()
+        //val otherServices: MutableSet<OtherService> = mutableSetOf()
+
+        drivingServices.add(DrivingService.DrivingBehaviour)
+        drivingServices.add(DrivingService.DistractionFreeDriving)
+
+        walkingServices.add(WalkingService.Location)
+
+        //otherServices.add(OtherService.PointsOfInterest)
+        //otherServices.add(OtherService.Crash)
+        //otherServices.add(OtherService.AssistanceCall)
+
+        moveDetectionServices.add(MoveDetectionService.Driving(drivingServices = drivingServices.toList()))
+        moveDetectionServices.add(MoveDetectionService.Walking(walkingServices = walkingServices.toList()))
+
+        moveDetectionServices.add(MoveDetectionService.Cycling)
+        moveDetectionServices.add(MoveDetectionService.Places)
+        moveDetectionServices.add(MoveDetectionService.PublicTransport)
+        moveDetectionServices.add(MoveDetectionService.PointsOfInterest)
+        moveDetectionServices.add(MoveDetectionService.AutomaticImpactDetection)
+        moveDetectionServices.add(MoveDetectionService.AssistanceCall)
+
+        return MoveConfig(
+            moveDetectionServices = moveDetectionServices.toList(),
+        )
     }
 
     private fun createRecognitionNotification(context: Context): NotificationCompat.Builder {
@@ -200,12 +266,10 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         val channelId = NOTIFICATION_CHANNEL
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name: CharSequence = context.getString(R.string.notification_recognition)
-            val importance = NotificationManager.IMPORTANCE_LOW
-            val mChannel = NotificationChannel(channelId, name, importance)
-            notificationManager.createNotificationChannel(mChannel)
-        }
+        val name: CharSequence = context.getString(R.string.notification_recognition)
+        val importance = NotificationManager.IMPORTANCE_LOW
+        val mChannel = NotificationChannel(channelId, name, importance)
+        notificationManager.createNotificationChannel(mChannel)
 
         val contentTitle = context.getString(R.string.waiting_for_trip)
         val builder = NotificationCompat.Builder(context, channelId)
@@ -226,17 +290,18 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
         // see -> MoveSdk Wiki / Notification Management
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name: CharSequence = context.getString(R.string.notification_driving)
-            val importance = NotificationManager.IMPORTANCE_LOW
-            val mChannel = NotificationChannel(NOTIFICATION_CHANNEL, name, importance)
-            notificationManager.createNotificationChannel(mChannel)
-        }
+        val name: CharSequence = context.getString(R.string.notification_driving)
+        val importance = NotificationManager.IMPORTANCE_LOW
+        val mChannel = NotificationChannel(NOTIFICATION_CHANNEL, name, importance)
+        notificationManager.createNotificationChannel(mChannel)
 
+        val intentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            PendingIntent.FLAG_IMMUTABLE
+        } else 0
         val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
         var contentIntent: PendingIntent? = null
         if (intent != null) {
-            contentIntent = PendingIntent.getActivity(context, 0, intent, 0)
+            contentIntent = PendingIntent.getActivity(context, 0, intent, intentFlags)
         }
 
         val contentTitle = context.getString(R.string.trip_active)
@@ -260,35 +325,34 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
      */
     @Deprecated(" Do that on your own backend, not on the fronted")
     fun registerUser() {
-        // Use the contract ids of your customers.
+        // Use the user ids of your customers.
         // This is only for the sample app. In real world it should be an unique userId.
-        val contractId = System.currentTimeMillis().toString()
+        val userId = System.currentTimeMillis().toString()
 
         // Let's fetch the necessary values from the MOVE backend.
         // In this sample app we use retrofit.
         // see -> https://developer.android.com/training/basics/network-ops/connecting
         val apiInterface = MoveBackendApi.create().registerUser(
-            registerRequest = RegisterRequest(contractId),
+            registerRequest = RegisterRequest(userId),
             authHeader = "Bearer ${BuildConfig.MOVE_API_KEY}"
         )
 
         apiInterface.enqueue(object : Callback<RegisterResponse> {
 
             override fun onResponse(
-                call: Call<RegisterResponse>?,
-                response: Response<RegisterResponse>?
+                call: Call<RegisterResponse>,
+                response: Response<RegisterResponse>
             ) {
                 // Handle the response from the MOVE backend.
-                response?.body()?.let { responseBody ->
-                    val productId = responseBody.productId.toLong()
+                response.body()?.let { responseBody ->
+                    val projectId = responseBody.projectId.toLong()
                     val accessToken = responseBody.accessToken
                     val refreshToken = responseBody.refreshToken
-                    val contract = responseBody.contractId
 
-                    if (productId != BuildConfig.MOVE_API_PRODUCT) {
+                    if (projectId != BuildConfig.MOVE_API_PROJECT) {
                         throw IllegalArgumentException(
-                            "ProductID mismatch ($productId vs ${BuildConfig.MOVE_API_PRODUCT})" +
-                                    ", please ensure that you are using the correct ProductID and API Key"
+                            "ProjectID mismatch ($projectId vs ${BuildConfig.MOVE_API_PROJECT})" +
+                                ", please ensure that you are using the correct ProjectID and API Key"
                         )
                     }
 
@@ -297,12 +361,17 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
                         Context.MODE_PRIVATE
                     )
                     val editor = sharedPref.edit()
-                    editor.putString(PREF_CONTRACT_ID, contract)
+                    editor.putString(PREF_USER_ID, userId)
                     editor.putString(PREF_ACCESS_TOKEN, accessToken)
                     editor.putString(PREF_REFRESH_TOKEN, refreshToken)
                     editor.apply()
 
-                    moveAuth = MoveAuth(BuildConfig.MOVE_API_PRODUCT, contractId, accessToken, refreshToken).also {
+                    moveAuth = MoveAuth(
+                        BuildConfig.MOVE_API_PROJECT,
+                        userId,
+                        accessToken,
+                        refreshToken
+                    ).also {
                         // if we have already a SDK instance, we can just update authentication
                         moveSdk?.updateAuth(it)
                         // otherwise we just start it from scratch
@@ -311,9 +380,9 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
                 }
             }
 
-            override fun onFailure(call: Call<RegisterResponse>?, t: Throwable?) {
+            override fun onFailure(call: Call<RegisterResponse>, t: Throwable) {
                 // Make sure that in case of an error the request is executed again.
-                Log.e(TAG, t?.message, t)
+                Log.e(TAG, t.message, t)
                 launch {
                     // NOTE: This not a real MoveConfigError, but for simplicity we just use that for now
                     moveConfigErrorFlow.emit(MoveConfigurationError.ServiceUnreachable)
@@ -324,12 +393,13 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
 
     fun setupSdk(context: Context, canRegister: Boolean = false) {
         val sharedPref = context.getSharedPreferences(PREF_SHARED_NAME, Context.MODE_PRIVATE)
-        val contractId = sharedPref.getString(PREF_CONTRACT_ID, "")
+        val userId = sharedPref.getString(PREF_USER_ID, "")
         val accessToken = sharedPref.getString(PREF_ACCESS_TOKEN, "")
         val refreshToken = sharedPref.getString(PREF_REFRESH_TOKEN, "")
-        if (!contractId.isNullOrEmpty() && !accessToken.isNullOrEmpty() && !refreshToken.isNullOrEmpty()) {
+        if (!userId.isNullOrEmpty() && !accessToken.isNullOrEmpty() && !refreshToken.isNullOrEmpty()) {
             // We have all necessary data to initialize the MoveSdk.
-            val moveAuth = MoveAuth(BuildConfig.MOVE_API_PRODUCT, contractId, accessToken, refreshToken)
+            val moveAuth =
+                MoveAuth(BuildConfig.MOVE_API_PROJECT, userId, accessToken, refreshToken)
             initSdk(moveAuth)
         } else if (canRegister) {
             // No SDK data available -> let's get the data from the backend
@@ -340,8 +410,17 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
     fun initSdk(moveAuth: MoveAuth? = null) {
         moveAuth?.let {
             // if there is no authentication data passed, it will end in an configuration error
-            moveSdkBuilder.authentication(moveAuth)
+            configureMoveSdk(moveAuth)
         }
-        moveSdk = moveSdkBuilder.init(context)
+    }
+
+    fun callAssistance() {
+        moveSdk?.initiateAssistanceCall(
+            assistanceListener = assistanceListener,
+        )
+    }
+
+    fun updateConfig() {
+        moveSdk?.updateConfig(createMoveConfig())
     }
 }

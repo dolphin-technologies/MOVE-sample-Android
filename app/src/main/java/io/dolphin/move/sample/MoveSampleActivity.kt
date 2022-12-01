@@ -21,7 +21,6 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
-import io.dolphin.move.MoveSdkState
 import io.dolphin.move.sample.ui.MoveSampleFragment
 
 const val PERMISSIONS_REQUEST_CODE = 123
@@ -69,12 +68,6 @@ class MoveSampleActivity : AppCompatActivity() {
 
     private fun notifyPermissionState() {
         // Tell MoveSdk that the app has handled the occurred errors.
-        val moveSdk = MoveSdkManager.getInstance(this).moveSdk
-        moveSdk?.let { sdk ->
-            val sdkState = sdk.getSdkState()
-            if (sdkState is MoveSdkState.Error) {
-                sdkState.resolved()
-            }
-        }
+        MoveSdkManager.getInstance(this).moveSdk?.resolveError()
     }
 }

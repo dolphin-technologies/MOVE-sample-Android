@@ -23,10 +23,13 @@ import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.widget.SwitchCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -34,7 +37,6 @@ import io.dolphin.move.MoveSdk
 import io.dolphin.move.MoveSdkState
 import io.dolphin.move.MoveTripState
 import io.dolphin.move.sample.R
-
 
 class MoveSampleFragment : Fragment() {
 
@@ -66,6 +68,7 @@ class MoveSampleFragment : Fragment() {
         val sdkStatus: TextView = view.findViewById(R.id.sdk_status)
         val sdkAction: SwitchCompat = view.findViewById(R.id.sdk_action)
         val sdkError: TextView = view.findViewById(R.id.sdk_error_text)
+        val sdkWarning: TextView = view.findViewById(R.id.sdk_warning_text)
         val versionView: TextView = view.findViewById(R.id.sdk_version)
 
         val locationContainer: View = view.findViewById(R.id.permission_location_container)
@@ -74,6 +77,10 @@ class MoveSampleFragment : Fragment() {
         val batteryContainer: View = view.findViewById(R.id.permission_battery_container)
         val backgroundContainer: View = view.findViewById(R.id.permission_background_container)
         val activityContainer: View = view.findViewById(R.id.permission_activity_container)
+        val bluetoothContainer: LinearLayout =
+            view.findViewById(R.id.permission_bluetooth_container)
+        val notificationContainer: LinearLayout =
+            view.findViewById(R.id.permission_notification_container)
 
         val locationImageView: ImageView = view.findViewById(R.id.permission_location_icon)
         val phoneStateImageView: ImageView = view.findViewById(R.id.permission_phone_state_icon)
@@ -81,10 +88,15 @@ class MoveSampleFragment : Fragment() {
         val batteryImageView: ImageView = view.findViewById(R.id.permission_battery_icon)
         val backgroundImageView: ImageView = view.findViewById(R.id.permission_background_icon)
         val activityImageView: ImageView = view.findViewById(R.id.permission_activity_icon)
+        val bluetoothImageView: ImageView = view.findViewById(R.id.permission_bluetooth_icon)
+        val notificationImageView: ImageView = view.findViewById(R.id.permission_notification_icon)
 
         val sdkStateView: TextView = view.findViewById(R.id.sdk_state_value)
         val sdkTripStateView: TextView = view.findViewById(R.id.sdk_trip_state_value)
-        val sdkContractIdView: TextView = view.findViewById(R.id.sdk_contract_id_value)
+        val sdkUserIdView: TextView = view.findViewById(R.id.sdk_user_id_value)
+
+        val buttonCallAssistance: Button = view.findViewById(R.id.button_call_assistance)
+        val buttonUpdateConfig: Button = view.findViewById(R.id.button_update_config)
 
         versionView.text = MoveSdk.version
 
@@ -147,13 +159,19 @@ class MoveSampleFragment : Fragment() {
             }
         })
 
+        model.sdkWarning().observe(viewLifecycleOwner, { warning ->
+            sdkWarning.isVisible = warning.isNotBlank()
+            sdkWarning.text = warning
+        })
+
         model.sdkState().observe(viewLifecycleOwner, { moveSdkState ->
+            buttonCallAssistance.isEnabled = moveSdkState == MoveSdkState.Running
+            buttonUpdateConfig.isEnabled =
+                moveSdkState == MoveSdkState.Running ||
+                        moveSdkState == MoveSdkState.Ready
             when (moveSdkState) {
                 is MoveSdkState.Ready -> {
                     sdkStateView.setText(R.string.sdk_ready)
-                }
-                is MoveSdkState.Error -> {
-                    sdkStateView.setText(R.string.sdk_error)
                 }
                 is MoveSdkState.Uninitialised -> {
                     sdkStateView.setText(R.string.sdk_uninitialised)
@@ -177,11 +195,11 @@ class MoveSampleFragment : Fragment() {
             }
         })
 
-        model.contractId().observe(viewLifecycleOwner, { contractId ->
-            if (contractId.isNullOrEmpty()) {
-                sdkContractIdView.setText(R.string.not_registered)
+        model.userId().observe(viewLifecycleOwner, { userId ->
+            if (userId.isNullOrEmpty()) {
+                sdkUserIdView.setText(R.string.not_registered)
             } else {
-                sdkContractIdView.text = contractId
+                sdkUserIdView.text = userId
             }
         })
 
@@ -238,6 +256,43 @@ class MoveSampleFragment : Fragment() {
             // Not required < API 29
             backgroundContainer.visibility = View.GONE
             activityContainer.visibility = View.GONE
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            bluetoothContainer.setOnClickListener {
+                model.requestBluetoothPermission(activity)
+            }
+            model.bluetoothPermission.observe(viewLifecycleOwner, { granted ->
+                bluetoothImageView.setImageResource(getPermissionIcon(granted))
+            })
+
+        } else {
+            // Not required < API 31
+            bluetoothContainer.visibility = View.GONE
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationContainer.setOnClickListener {
+                model.requestNotificationPermission(activity)
+            }
+            model.notificationPermission.observe(viewLifecycleOwner, { granted ->
+                notificationImageView.setImageResource(getPermissionIcon(granted))
+            })
+        } else {
+            // Not required < API 33
+            notificationContainer.visibility = View.GONE
+        }
+
+        model.assistanceState.observe(viewLifecycleOwner) { assistanceCallState ->
+            Toast.makeText(requireContext(), assistanceCallState.name, Toast.LENGTH_SHORT).show()
+        }
+
+        buttonCallAssistance.setOnClickListener {
+            model.requestCallAssistance()
+        }
+
+        buttonUpdateConfig.setOnClickListener {
+            model.requestMoveConfigUpdate()
         }
 
         model.load(requireActivity())
