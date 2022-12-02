@@ -31,7 +31,7 @@ import retrofit2.http.POST
  */
 interface MoveBackendApi {
 
-    @POST("/sdk-auth/v1_3/jwt/registeruser")
+    @POST("/v20/auth/register")
     fun registerUser(
         @Body registerRequest: RegisterRequest,
         @Header("Authorization") authHeader: String?

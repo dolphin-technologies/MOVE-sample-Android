@@ -28,15 +28,18 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import io.dolphin.move.AssistanceCallState
 import io.dolphin.move.MoveConfigurationError
 import io.dolphin.move.MoveSdkState
 import io.dolphin.move.MoveTripState
-import io.dolphin.move.sample.MoveSampleApplication.Companion.PREF_CONTRACT_ID
+import io.dolphin.move.sample.BuildConfig
+import io.dolphin.move.sample.MoveSampleApplication.Companion.PREF_USER_ID
 import io.dolphin.move.sample.MoveSampleApplication.Companion.PREF_ENABLED
 import io.dolphin.move.sample.MoveSampleApplication.Companion.PREF_SHARED_NAME
 import io.dolphin.move.sample.MoveSdkManager
@@ -45,8 +48,10 @@ import io.dolphin.move.sample.thirdparty.SingleLiveEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 
 enum class ActivationState {
@@ -64,7 +69,7 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
     internal val moveSdkActivation: MediatorLiveData<ActivationState> =
         MediatorLiveData<ActivationState>()
 
-    private val contractId: MediatorLiveData<String> = MediatorLiveData<String>()
+    private val userId: MediatorLiveData<String> = MediatorLiveData<String>()
     private val sdkState: MutableLiveData<MoveSdkState> = MutableLiveData<MoveSdkState>()
     private val tripState: MutableLiveData<MoveTripState> = MutableLiveData<MoveTripState>()
 
@@ -74,17 +79,25 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
     internal val phoneStatePermission: MutableLiveData<Boolean> = MutableLiveData<Boolean>(false)
     internal val overlayPermission: MutableLiveData<Boolean> = MutableLiveData<Boolean>(false)
     internal val batteryPermission: MutableLiveData<Boolean> = MutableLiveData<Boolean>(false)
+    internal val bluetoothPermission: MutableLiveData<Boolean> = MutableLiveData<Boolean>(false)
+    internal val notificationPermission: MutableLiveData<Boolean> = MutableLiveData<Boolean>(false)
+    internal val assistanceState: MutableLiveData<AssistanceCallState> =
+        MutableLiveData<AssistanceCallState>()
 
     private val sdkError: MutableLiveData<String> = MutableLiveData<String>()
+    private val sdkWarning: MutableLiveData<String> = MutableLiveData<String>()
     private val configError: SingleLiveEvent<MoveConfigurationError> = SingleLiveEvent()
 
     init {
         moveSdkActivation.addSource(sdkState) {
             moveSdkActivation.value = evaluateWorkingState()
         }
-        contractId.addSource(sdkState) {
-            val id = sharedPref.getString(PREF_CONTRACT_ID, "")
-            contractId.value = id.toString()
+        userId.addSource(sdkState) {
+            val id = sharedPref.getString(PREF_USER_ID, "")
+            userId.value = id.toString()
+            if (BuildConfig.DEBUG) {
+                Log.d(this::class.simpleName, "Your user ID: ${id.toString()}")
+            }
         }
     }
 
@@ -92,9 +105,6 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
         return when (sdkState.value) {
             MoveSdkState.Running -> {
                 ActivationState.RUNNING
-            }
-            is MoveSdkState.Error -> {
-                ActivationState.ERROR
             }
             else -> {
                 ActivationState.NOT_RUNNING
@@ -132,6 +142,38 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
             }
             .flowOn(Dispatchers.IO)
             .launchIn(this)
+
+        moveSdkManager.fetchErrorsFlow()
+            .map {
+                it.joinToString("\n\n") { moveServiceFailure ->
+                    val serviceName = moveServiceFailure.service.name()
+                    val reasons =
+                        moveServiceFailure.reasons.joinToString("\n") { error -> error.name }
+                    "$serviceName\n$reasons"
+                }
+            }
+            .onEach(sdkError::postValue)
+            .flowOn(Dispatchers.IO)
+            .launchIn(this)
+
+        moveSdkManager.fetchWarningsFlow()
+            .map {
+                it.joinToString("\n\n") { moveServiceWarning ->
+                    val serviceName = moveServiceWarning.service?.name().orEmpty()
+                    val reasons =
+                        moveServiceWarning.warnings.joinToString("\n") { w -> w.name }
+                    "$serviceName\n$reasons"
+                }
+            }
+            .onEach(sdkWarning::postValue)
+            .flowOn(Dispatchers.IO)
+            .launchIn(this)
+
+        moveSdkManager.fetchAssistanceStateFlow()
+            .filterNotNull()
+            .onEach(assistanceState::postValue)
+            .flowOn(Dispatchers.IO)
+            .launchIn(this)
     }
 
     fun sdkState(): LiveData<MoveSdkState> {
@@ -142,8 +184,8 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
         return tripState
     }
 
-    fun contractId(): LiveData<String> {
-        return contractId
+    fun userId(): LiveData<String> {
+        return userId
     }
 
     fun sdkError(): LiveData<String> {
@@ -152,6 +194,10 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
 
     fun configError(): LiveData<MoveConfigurationError> {
         return configError
+    }
+
+    fun sdkWarning(): LiveData<String> {
+        return sdkWarning
     }
 
     fun updatePermissionViews(activity: Activity?) {
@@ -181,6 +227,22 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
                     ContextCompat.checkSelfPermission(
                         it,
                         Manifest.permission.ACTIVITY_RECOGNITION
+                    ) == PackageManager.PERMISSION_GRANTED
+                )
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                bluetoothPermission.postValue(
+                    ContextCompat.checkSelfPermission(
+                        it,
+                        Manifest.permission.BLUETOOTH_CONNECT
+                    ) == PackageManager.PERMISSION_GRANTED
+                )
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                notificationPermission.postValue(
+                    ContextCompat.checkSelfPermission(
+                        it,
+                        Manifest.permission.POST_NOTIFICATIONS
                     ) == PackageManager.PERMISSION_GRANTED
                 )
             }
@@ -292,6 +354,41 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
         }
     }
 
+    fun requestBluetoothPermission(activity: Activity?) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            activity?.let {
+                if (ContextCompat.checkSelfPermission(
+                        it,
+                        Manifest.permission.BLUETOOTH_CONNECT
+                    ) == PackageManager.PERMISSION_DENIED
+                ) {
+                    it.requestPermissions(
+                        arrayOf(Manifest.permission.BLUETOOTH_CONNECT),
+                        PERMISSIONS_REQUEST_CODE
+                    )
+                }
+            }
+        }
+    }
+
+    fun requestNotificationPermission(activity: Activity?) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            activity?.let {
+                if (ContextCompat.checkSelfPermission(
+                        it,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_DENIED
+                ) {
+                    val intent = Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.parse("package:${it.packageName}")
+                    )
+                    it.startActivityForResult(intent, PERMISSIONS_REQUEST_CODE)
+                }
+            }
+        }
+    }
+
     fun turnMoveSdkOn(context: Context) {
         sharedPref.edit().putBoolean(PREF_ENABLED, true).apply()
 
@@ -308,6 +405,14 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
 
     fun forceSync() {
         moveSdkManager.moveSdk?.synchronizeUserData()
+    }
+
+    fun requestCallAssistance() {
+        moveSdkManager.callAssistance()
+    }
+
+    fun requestMoveConfigUpdate() {
+        moveSdkManager.updateConfig()
     }
 }
 

@@ -8,6 +8,7 @@
     <color name="move_text_dark">#ff07132f</color>
     <color name="move_text_light">#ff5a5a5a</color>
     <color name="move_text_error">#ffff0000</color>
+    <color name="move_text_warning">#ffffaa00</color>
 
     <color name="section_bg">#fff2f3f4</color>
 

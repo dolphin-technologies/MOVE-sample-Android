@@ -18,14 +18,14 @@
 package io.dolphin.move.sample.backend
 
 data class RegisterRequest(
-    var contractId: String
+    var userId: String
 )
 
 data class RegisterResponse(
     var accessToken: String,
     var refreshToken: String,
-    var contractId: String,
+    var userId: String,
     var audience: String,
     var installationId: String,
-    var productId: String
+    var projectId: String
 )

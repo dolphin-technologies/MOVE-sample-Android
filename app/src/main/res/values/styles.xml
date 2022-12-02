@@ -35,10 +35,17 @@
     </style>
 
     <style name="activity_error_text">
-        <item name="android:gravity">center</item>
+        <item name="android:gravity">start</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">16sp</item>
         <item name="android:textColor">@color/move_text_error</item>
+    </style>
+
+    <style name="activity_warning_text">
+        <item name="android:gravity">start</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/move_text_warning</item>
     </style>
 
 </resources>

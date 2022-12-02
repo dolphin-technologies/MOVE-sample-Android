@@ -26,7 +26,7 @@ class MoveSampleApplication : Application() {
 
         const val PREF_ACCESS_TOKEN = "accessToken"
         const val PREF_REFRESH_TOKEN = "refreshToken"
-        const val PREF_CONTRACT_ID = "contractId"
+        const val PREF_USER_ID = "userId"
         const val PREF_ENABLED = "enabled"
     }
 
