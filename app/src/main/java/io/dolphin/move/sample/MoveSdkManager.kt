@@ -25,6 +25,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
 import android.util.Log
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import io.dolphin.move.*
 import io.dolphin.move.sample.MoveSampleApplication.Companion.PREF_ACCESS_TOKEN
@@ -65,7 +66,8 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
     private val moveConfigErrorFlow = MutableStateFlow<MoveConfigurationError?>(null)
     private val moveErrorsFlow = MutableStateFlow<List<MoveServiceFailure>>(emptyList())
     private val moveWarningsFlow = MutableStateFlow<List<MoveServiceWarning>>(emptyList())
-    private val assistanceStateFlow = MutableStateFlow<AssistanceCallState?>(null)
+    private val assistanceStateFlow = MutableStateFlow<MoveAssistanceCallStatus?>(null)
+
 
     fun fetchMoveStateFlow(): StateFlow<MoveSdkState> {
         return moveStateFlow
@@ -87,7 +89,7 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
         return moveWarningsFlow
     }
 
-    fun fetchAssistanceStateFlow(): StateFlow<AssistanceCallState?> {
+    fun fetchAssistanceStateFlow(): StateFlow<MoveAssistanceCallStatus?> {
         return assistanceStateFlow
     }
 
@@ -100,22 +102,18 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
                 moveConfigErrorFlow.emit(error)
             }
             when (error) {
-                is MoveConfigurationError.AuthInvalid -> {
-                    // It might happen that the retrieved token is already outdated, so we need to get a new one
-                    registerUser()
-                }
-                is MoveConfigurationError.ConfigMismatch -> {
-                    Log.e(
-                        "MoveConfigurationError",
-                        "It seems that you art trying to use a service which you are not allowed. Please contact customer support"
-                    )
-                }
                 is MoveConfigurationError.ServiceUnreachable -> {
                     Log.e(
                         "MoveConfigurationError",
                         "The connection to our servers failed. Please ensure that you have a valid internet connection. If the problem still remains, please contact customer support"
                     )
                 }
+
+                else -> {
+                    Log.e(
+                        "MoveConfigurationError",
+                        "An unknown error occurred."
+                    )}
             }
         }
     }
@@ -150,17 +148,16 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
             moveAuthStateFlow.value = state
 
             when (state) {
-                is MoveAuthState.EXPIRED -> {
-                    // Latest MoveAuth expired and the SDK can't refresh it.
-                    // Requesting new Auth using the project's API Key and then passing it to the SDK.
-                    registerUser()
-                }
                 is MoveAuthState.VALID -> {
                     // Authentication is valid. Latest MoveAuth provided.
+                }
+                is MoveAuthState.INVALID -> {
+                    // Authentication is invalid.
                 }
                 is MoveAuthState.UNKNOWN -> {
                     // The SDK authorization state when SDK is uninitialized.
                 }
+                else -> {}
             }
         }
     }
@@ -191,11 +188,10 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
     }
 
     private val assistanceListener = object : MoveSdk.AssistanceStateListener {
-        override fun onAssistanceStateChanged(assistanceState: AssistanceCallState) {
+        override fun onAssistanceStateChanged(assistanceState: MoveAssistanceCallStatus) {
             assistanceStateFlow.value = assistanceState
-            Log.d("AssistanceCallState", assistanceState.name)
+            Log.d("MoveAssistanceCallStatus", assistanceState.name)
         }
-
     }
 
     init {
@@ -323,8 +319,8 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
     /**
      * Register
      */
-    @Deprecated(" Do that on your own backend, not on the fronted")
-    fun registerUser() {
+    @Deprecated(" Do that on your own backend, not on the frontend")
+    fun registerUser(context: Context) {
         // Use the user ids of your customers.
         // This is only for the sample app. In real world it should be an unique userId.
         val userId = System.currentTimeMillis().toString()
@@ -344,7 +340,8 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
                 response: Response<RegisterResponse>
             ) {
                 // Handle the response from the MOVE backend.
-                response.body()?.let { responseBody ->
+                val responseBody = response.body()
+                if (responseBody != null) {
                     val projectId = responseBody.projectId.toLong()
                     val accessToken = responseBody.accessToken
                     val refreshToken = responseBody.refreshToken
@@ -352,7 +349,7 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
                     if (projectId != BuildConfig.MOVE_API_PROJECT) {
                         throw IllegalArgumentException(
                             "ProjectID mismatch ($projectId vs ${BuildConfig.MOVE_API_PROJECT})" +
-                                ", please ensure that you are using the correct ProjectID and API Key"
+                                    ", please ensure that you are using the correct ProjectID and API Key"
                         )
                     }
 
@@ -377,6 +374,9 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
                         // otherwise we just start it from scratch
                             ?: initSdk(it)
                     }
+                } else {
+                    Toast.makeText(context, "Check MOVE_API_KEY!", Toast.LENGTH_LONG)
+                        .show()
                 }
             }
 
@@ -403,7 +403,7 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
             initSdk(moveAuth)
         } else if (canRegister) {
             // No SDK data available -> let's get the data from the backend
-            registerUser()
+            registerUser(context)
         }
     }
 

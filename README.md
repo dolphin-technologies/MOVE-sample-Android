@@ -20,12 +20,12 @@ Reference: [MOVE Android SDK documentation](https://docs.movesdk.com/)
 MoveSampleApplication and MoveSdkManager are recommended starting points for embedding the SDK in an already existing or new project.
 
 ### Authorization
-After contacting us and getting a product API key, use it to fetch a MoveAuth from the Move Server (see fun registerUser(..) / MoveBackendApi). MoveAuth object will be passed to the SDK on initialization (see fun buildMoveSdk(moveAuth: MoveAuth) / MoveSdkManager) and be used by the SDK to authenticate its services.
+After contacting us and getting a product API key, use it to fetch a MoveAuth from the Move Server (see fun registerUser(..) / MoveBackendApi). MoveAuth object will be passed to the SDK on initialization (see fun configureMoveSdk(moveAuth: MoveAuth) / MoveSdkManager) and will be used by the SDK to authenticate its services.
 
 If the provided MoveAuth was invalid, the SDK will not initialize (see MoveSdk.AuthStateUpdateListener / see MoveSdkManager). Check Initialization for more details about possible outcomes.
 
 ### Configuration
-With MoveSdk.Builder (see fun buildMoveSdk(moveAuth: MoveAuth) / MoveSdkManager) you are able to configure which of the licensed Move services should be enabled.
+With MoveSdk.Builder (see fun configureMoveSdk(moveAuth: MoveAuth) / MoveSdkManager) you are able to configure which of the licensed Move services should be enabled.
 
 All permissions required for the requested configurations must be granted. MoveSdk.StateListener (see MoveSdkManager) will be triggered otherwise.
 
@@ -34,7 +34,7 @@ In MoveBackendApi you find one possibility to register your project to our backe
 
 After the credentials have been requested and the app permissions have been obtained from the user, the MOVE SDK will be initialized (see fun buildMoveSdk(moveAuth: MoveAuth) / MoveSdkManager).
 
-MoveSdk.AuthStateUpdateListener (see MoveSdkManager) is used to update expired authentication credentials.
+MoveSdk.AuthStateUpdateListener (see MoveSdkManager) is used to inform about the status of the authentication credentials.
 
 With MoveSdk.StateListener / onStateChanged(...) (see MoveSdkManager) it is possible to get the state of the MOVE SDK and visualize it to the user.
 

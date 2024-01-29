@@ -17,15 +17,28 @@
 
 package io.dolphin.move.sample.backend
 
+/**
+ * API for creating a user on the MOVE Backend.
+ * In real use this should be done by the BACKEND and NOT on the frontend.
+ * Retrofit is used to create this API.
+ */
+
+/**
+ * The RegisterRequest with the userId which will be send to the backend.
+ */
 data class RegisterRequest(
     var userId: String
 )
 
+/**
+ * The RegisterResponse with the accessToken, refreshToken, userId, audience,
+ * installationId and projectId which will be received from the backend.
+ */
 data class RegisterResponse(
-    var accessToken: String,
-    var refreshToken: String,
-    var userId: String,
-    var audience: String,
-    var installationId: String,
-    var projectId: String
+    var accessToken: String, // accessToken ... allows communication with MOVE SDK backend
+    var refreshToken: String, // refreshToken ... allows app to renew access token
+    var userId: String, // userId ... to identify the user within the project.
+    var audience: String, // audience ... not used in this example.
+    var installationId: String, // installationId ... not used in this example.
+    var projectId: String // projectId ... to identify the project.
 )
