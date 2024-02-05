@@ -5,7 +5,7 @@ This timeline gives you insights on where your users move and how they get there
 The MOVE SDK Sample App shows you how to integrate our SDK very easily into your existing or future app.
 
 ## To run this project:
-1. Request a product API Key by contacting Dolphin MOVE.
+1. Request a PRODUCT ID and the MOVE_API_KEY by contacting Dolphin MOVE.
 2. This sample uses the Gradle build system. To build this project, use the "gradlew build" command or use "Import Project" in Android Studio.
 3. To add it to your project add the following lines to your project build.gradle / allprojects / repositories:
         maven {
