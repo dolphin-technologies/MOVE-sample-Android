@@ -5,14 +5,15 @@ This timeline gives you insights on where your users move and how they get there
 The MOVE SDK Sample App shows you how to integrate our SDK very easily into your existing or future app.
 
 ## To run this project:
-1. Request a product API Key by contacting Dolphin MOVE.
+1. Request a PRODUCT ID and the MOVE_API_KEY by contacting Dolphin MOVE.
 2. This sample uses the Gradle build system. To build this project, use the "gradlew build" command or use "Import Project" in Android Studio.
 3. To add it to your project add the following lines to your project build.gradle / allprojects / repositories:
         maven {
             url "https://dolphin.jfrog.io/artifactory/move-sdk-libs-release"
         }
-4. In the app module build.gradle file replace the Bearer value (MOVE_API_KEY) with the product API Key you received.
-5. Clean, build and run the application on your device
+4. In the app module build.gradle file please replace the value "1234" (MOVE_API_PROJECT) with the PROJECT ID you received. You can find this also in the [MOVE Dashboard](https://dashboard.movesdk.com/admin/sdkConfig).
+5. In the same app module build.gradle file please replace the value "YOUR_API_KEY" (MOVE_API_KEY) with the API Key you received. You can find this also in the [MOVE Dashboard](https://dashboard.movesdk.com/admin/sdkConfig/keys).
+6. Clean, build and run the application on your device.
 
 Reference: [MOVE Android SDK documentation](https://docs.movesdk.com/)
 
@@ -20,12 +21,12 @@ Reference: [MOVE Android SDK documentation](https://docs.movesdk.com/)
 MoveSampleApplication and MoveSdkManager are recommended starting points for embedding the SDK in an already existing or new project.
 
 ### Authorization
-After contacting us and getting a product API key, use it to fetch a MoveAuth from the Move Server (see fun registerUser(..) / MoveBackendApi). MoveAuth object will be passed to the SDK on initialization (see fun buildMoveSdk(moveAuth: MoveAuth) / MoveSdkManager) and be used by the SDK to authenticate its services.
+After contacting us and getting a PROJECT ID, use it to fetch a MoveAuth from the Move Server (see fun registerUser(..) / MoveBackendApi). MoveAuth object will be passed to the SDK on initialization (see fun configureMoveSdk(moveAuth: MoveAuth) / MoveSdkManager) and will be used by the SDK to authenticate its services.
 
-If the provided MoveAuth was invalid, the SDK will not initialize (see MoveSdk.AuthStateUpdateListener / see MoveSdkManager). Check Initialization for more details about possible outcomes.
+If the provided MoveAuth was invalid, the MOVE SDK should be shutdown (see MoveSdk.AuthStateUpdateListener / see MoveSdkManager). Check Initialization for more details about possible outcomes.
 
 ### Configuration
-With MoveSdk.Builder (see fun buildMoveSdk(moveAuth: MoveAuth) / MoveSdkManager) you are able to configure which of the licensed Move services should be enabled.
+With MoveSdk.Builder (see fun configureMoveSdk(moveAuth: MoveAuth) / MoveSdkManager) you are able to configure which of the licensed Move services should be enabled.
 
 All permissions required for the requested configurations must be granted. MoveSdk.StateListener (see MoveSdkManager) will be triggered otherwise.
 
@@ -34,7 +35,7 @@ In MoveBackendApi you find one possibility to register your project to our backe
 
 After the credentials have been requested and the app permissions have been obtained from the user, the MOVE SDK will be initialized (see fun buildMoveSdk(moveAuth: MoveAuth) / MoveSdkManager).
 
-MoveSdk.AuthStateUpdateListener (see MoveSdkManager) is used to update expired authentication credentials.
+MoveSdk.AuthStateUpdateListener (see MoveSdkManager) is used to inform about the status of the authentication credentials.
 
 With MoveSdk.StateListener / onStateChanged(...) (see MoveSdkManager) it is possible to get the state of the MOVE SDK and visualize it to the user.
 

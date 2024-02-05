@@ -27,10 +27,19 @@ import retrofit2.http.Header
 import retrofit2.http.POST
 
 /**
- * API for creating a user on the MOVE Backend. In real use this should be done by the BACKEND and NOT on the frontend.
+ * API for creating a user on the MOVE Backend.
+ * In real use this should be done by the BACKEND and NOT on the frontend.
+ * Retrofit is used to create this API.
  */
 interface MoveBackendApi {
 
+    /**
+     * Register a user on the MOVE Backend by using retrofit.
+     *
+     * @param registerRequest The request body containing the user's data.
+     * @param authHeader The auth header containing the API key.
+     * @return The response body containing the user's data.
+     */
     @POST("/v20/auth/register")
     fun registerUser(
         @Body registerRequest: RegisterRequest,
@@ -40,6 +49,11 @@ interface MoveBackendApi {
     companion object {
         private var BASE_URL = "https://sdk.dolph.in/"
 
+        /**
+         * Create the MoveBackendApi.
+         *
+         * @return The the MoveBackendApi.
+         */
         fun create(): MoveBackendApi {
             val interceptor = HttpLoggingInterceptor()
             interceptor.level = HttpLoggingInterceptor.Level.BODY

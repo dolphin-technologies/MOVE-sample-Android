@@ -30,9 +30,12 @@ class MoveSampleApplication : Application() {
         const val PREF_ENABLED = "enabled"
     }
 
-    // Keep reference in your application to prevent garbage collection
+    // Keep reference in your application to prevent garbage collection.
     private lateinit var moveSdkManager: MoveSdkManager
 
+    /**
+     * Create the MoveSampleApplication and initialize the MoveSdkManager.
+     */
     override fun onCreate() {
         super.onCreate()
 

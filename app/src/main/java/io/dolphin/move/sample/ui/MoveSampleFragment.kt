@@ -38,6 +38,11 @@ import io.dolphin.move.MoveSdkState
 import io.dolphin.move.MoveTripState
 import io.dolphin.move.sample.R
 
+/**
+ * Move sample fragment
+ *
+ * @constructor Create empty Move sample fragment
+ */
 class MoveSampleFragment : Fragment() {
 
     companion object {
@@ -46,11 +51,22 @@ class MoveSampleFragment : Fragment() {
 
     private lateinit var model: MoveSampleViewModel
 
+    /**
+     * On resume update permission views
+     */
     override fun onResume() {
         super.onResume()
         model.updatePermissionViews(requireActivity())
     }
 
+    /**
+     * On create view inflate move sample fragment
+     *
+     * @param inflater Layout inflater object to inflate the view
+     * @param container View group container
+     * @param savedInstanceState Bundle object to save the state
+     * @return Inflated view
+     */
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -59,6 +75,12 @@ class MoveSampleFragment : Fragment() {
         return inflater.inflate(R.layout.move_sample_fragment, container, false)
     }
 
+    /**
+     * On view created initialise the view model and update the permission views
+     *
+     * @param view Inflated view
+     * @param savedInstanceState Bundle object to save the state
+     */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -106,6 +128,7 @@ class MoveSampleFragment : Fragment() {
             swipeRefresh.isRefreshing = false
         }
 
+        // Toggle the MOVE SDK on/off.
         sdkAction.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 model.turnMoveSdkOn(requireContext())
@@ -118,6 +141,7 @@ class MoveSampleFragment : Fragment() {
             sdkAction.isChecked = it
         }
 
+        // A visual representation of the MOVE SDK configuration state.
         model.configError().observe(viewLifecycleOwner) {
             it?.let { configurationError ->
                 Toast.makeText(requireContext(), configurationError.toString(), Toast.LENGTH_LONG)
@@ -128,6 +152,7 @@ class MoveSampleFragment : Fragment() {
             }
         }
 
+        // A visual and textual representation of the MOVE SDK state.
         model.moveSdkActivation.observe(viewLifecycleOwner) { workingState ->
             workingState?.let {
                 when (it) {
@@ -147,7 +172,8 @@ class MoveSampleFragment : Fragment() {
             }
         }
 
-        model.sdkError().observe(viewLifecycleOwner, { error ->
+         // A visual and textual representation of possible MOVE SDK errors.
+        model.sdkError().observe(viewLifecycleOwner) { error ->
             if (TextUtils.isEmpty(error)) {
                 sdkError.visibility = View.GONE
                 sdkError.text = ""
@@ -157,32 +183,38 @@ class MoveSampleFragment : Fragment() {
 
                 Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show()
             }
-        })
+        }
 
-        model.sdkWarning().observe(viewLifecycleOwner, { warning ->
+         // A visual and textual representation of possible MOVE SDK warnings.
+        model.sdkWarning().observe(viewLifecycleOwner) { warning ->
             sdkWarning.isVisible = warning.isNotBlank()
             sdkWarning.text = warning
-        })
+        }
 
-        model.sdkState().observe(viewLifecycleOwner, { moveSdkState ->
+         // A textual representation of the MOVE SDK state.
+         // Call assistance button only enabled if MOVE SDK is running.
+         // Update config button only enabled if MOVE SDK is running or ready.
+        model.sdkState().observe(viewLifecycleOwner) { moveSdkState ->
             buttonCallAssistance.isEnabled = moveSdkState == MoveSdkState.Running
-            buttonUpdateConfig.isEnabled =
-                moveSdkState == MoveSdkState.Running ||
-                        moveSdkState == MoveSdkState.Ready
+            buttonUpdateConfig.isEnabled = moveSdkState == MoveSdkState.Running || moveSdkState == MoveSdkState.Ready
+
             when (moveSdkState) {
                 is MoveSdkState.Ready -> {
                     sdkStateView.setText(R.string.sdk_ready)
                 }
+
                 is MoveSdkState.Uninitialised -> {
                     sdkStateView.setText(R.string.sdk_uninitialised)
                 }
+
                 is MoveSdkState.Running -> {
                     sdkStateView.setText(R.string.sdk_running)
                 }
             }
-        })
+        }
 
-        model.sdkTripState().observe(viewLifecycleOwner, { sdkTripState ->
+        // A textual representation of the MOVE SDK trip state.
+        model.sdkTripState().observe(viewLifecycleOwner) { sdkTripState ->
             when (sdkTripState) {
                 MoveTripState.DRIVING -> sdkTripStateView.setText(R.string.sdk_trip_state_driving)
                 MoveTripState.HALT -> sdkTripStateView.setText(R.string.sdk_trip_state_halt)
@@ -193,65 +225,67 @@ class MoveSampleFragment : Fragment() {
                     sdkTripStateView.setText(R.string.sdk_trip_state_unknown)
                 }
             }
-        })
+        }
 
-        model.userId().observe(viewLifecycleOwner, { userId ->
+        // A textual representation of the user registration with the MOVE SDK.
+        model.userId().observe(viewLifecycleOwner) { userId ->
             if (userId.isNullOrEmpty()) {
                 sdkUserIdView.setText(R.string.not_registered)
             } else {
                 sdkUserIdView.text = userId
             }
-        })
+        }
 
+        // Permission views
         val locationContainerClick = View.OnClickListener {
             model.requestLocationPermission(activity)
         }
         locationContainer.setOnClickListener(locationContainerClick)
 
-        model.locationPermission.observe(viewLifecycleOwner, { granted ->
+        model.locationPermission.observe(viewLifecycleOwner) { granted ->
             locationImageView.setImageResource(getPermissionIcon(granted))
-        })
+        }
 
         val phoneStateContainerClick = View.OnClickListener {
             model.requestPhoneStatePermission(activity)
         }
         phoneStateContainer.setOnClickListener(phoneStateContainerClick)
 
-        model.phoneStatePermission.observe(viewLifecycleOwner, { granted ->
+        model.phoneStatePermission.observe(viewLifecycleOwner) { granted ->
             phoneStateImageView.setImageResource(getPermissionIcon(granted))
-        })
+        }
 
         val overlayContainerClick = View.OnClickListener {
             model.requestOverlayPermission(activity)
         }
         overlayContainer.setOnClickListener(overlayContainerClick)
 
-        model.overlayPermission.observe(viewLifecycleOwner, { granted ->
+        model.overlayPermission.observe(viewLifecycleOwner) { granted ->
             overlayImageView.setImageResource(getPermissionIcon(granted))
-        })
+        }
 
         val batteryContainerClick = View.OnClickListener {
             model.requestBatteryPermission(activity)
         }
         batteryContainer.setOnClickListener(batteryContainerClick)
 
-        model.batteryPermission.observe(viewLifecycleOwner, { granted ->
+        model.batteryPermission.observe(viewLifecycleOwner) { granted ->
             batteryImageView.setImageResource(getPermissionIcon(granted))
-        })
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             backgroundContainer.setOnClickListener {
                 model.requestBackgroundPermission(activity)
             }
-            model.backgroundPermission.observe(viewLifecycleOwner, { granted ->
+            model.backgroundPermission.observe(viewLifecycleOwner) { granted ->
                 backgroundImageView.setImageResource(getPermissionIcon(granted))
-            })
+            }
             activityContainer.setOnClickListener {
                 model.requestActivityPermission(activity)
             }
-            model.activityPermission.observe(viewLifecycleOwner, { granted ->
+            model.activityPermission.observe(viewLifecycleOwner) { granted ->
                 activityImageView.setImageResource(getPermissionIcon(granted))
-            })
+            }
         } else {
             // Not required < API 29
             backgroundContainer.visibility = View.GONE
@@ -262,9 +296,9 @@ class MoveSampleFragment : Fragment() {
             bluetoothContainer.setOnClickListener {
                 model.requestBluetoothPermission(activity)
             }
-            model.bluetoothPermission.observe(viewLifecycleOwner, { granted ->
+            model.bluetoothPermission.observe(viewLifecycleOwner) { granted ->
                 bluetoothImageView.setImageResource(getPermissionIcon(granted))
-            })
+            }
 
         } else {
             // Not required < API 31
@@ -275,22 +309,24 @@ class MoveSampleFragment : Fragment() {
             notificationContainer.setOnClickListener {
                 model.requestNotificationPermission(activity)
             }
-            model.notificationPermission.observe(viewLifecycleOwner, { granted ->
+            model.notificationPermission.observe(viewLifecycleOwner) { granted ->
                 notificationImageView.setImageResource(getPermissionIcon(granted))
-            })
+            }
         } else {
             // Not required < API 33
             notificationContainer.visibility = View.GONE
         }
 
-        model.assistanceState.observe(viewLifecycleOwner) { assistanceCallState ->
-            Toast.makeText(requireContext(), assistanceCallState.name, Toast.LENGTH_SHORT).show()
+        model.assistanceState.observe(viewLifecycleOwner) { moveAssistanceCallStatus ->
+            Toast.makeText(requireContext(), moveAssistanceCallStatus.name, Toast.LENGTH_SHORT).show()
         }
 
+        // Request assistance call
         buttonCallAssistance.setOnClickListener {
             model.requestCallAssistance()
         }
 
+        // Request config update
         buttonUpdateConfig.setOnClickListener {
             model.requestMoveConfigUpdate()
         }
@@ -298,6 +334,12 @@ class MoveSampleFragment : Fragment() {
         model.load(requireActivity())
     }
 
+    /**
+     * Get permission icon based on permission granted.
+     *
+     * @param granted Boolean value to check if permission is granted
+     * @return Icon resource id based on permission granted
+     */
     private fun getPermissionIcon(granted: Boolean): Int {
         return if (granted)
             R.drawable.icon_active

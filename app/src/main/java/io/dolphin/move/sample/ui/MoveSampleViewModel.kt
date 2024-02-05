@@ -34,7 +34,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import io.dolphin.move.AssistanceCallState
+import io.dolphin.move.MoveAssistanceCallStatus
 import io.dolphin.move.MoveConfigurationError
 import io.dolphin.move.MoveSdkState
 import io.dolphin.move.MoveTripState
@@ -60,6 +60,9 @@ enum class ActivationState {
     RUNNING
 }
 
+/**
+ * ViewModel for the MoveSampleActivity.
+ */
 class MoveSampleViewModel : ViewModel(), CoroutineScope {
 
     private val job = Job()
@@ -81,8 +84,8 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
     internal val batteryPermission: MutableLiveData<Boolean> = MutableLiveData<Boolean>(false)
     internal val bluetoothPermission: MutableLiveData<Boolean> = MutableLiveData<Boolean>(false)
     internal val notificationPermission: MutableLiveData<Boolean> = MutableLiveData<Boolean>(false)
-    internal val assistanceState: MutableLiveData<AssistanceCallState> =
-        MutableLiveData<AssistanceCallState>()
+    internal val assistanceState: MutableLiveData<MoveAssistanceCallStatus> =
+        MutableLiveData<MoveAssistanceCallStatus>()
 
     private val sdkError: MutableLiveData<String> = MutableLiveData<String>()
     private val sdkWarning: MutableLiveData<String> = MutableLiveData<String>()
@@ -101,6 +104,11 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
         }
     }
 
+    /**
+     * Evaluate the current state of the MOVE SDK.
+     *
+     * @return The current state of the MOVE SDK.
+     */
     private fun evaluateWorkingState(): ActivationState {
         return when (sdkState.value) {
             MoveSdkState.Running -> {
@@ -116,6 +124,11 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
 
     private lateinit var sharedPref: SharedPreferences
 
+    /**
+     * Load the MoveSdkManager and the SharedPreferences.
+     *
+     * @param context The context of the activity.
+     */
     fun load(context: Context) {
         moveSdkManager = MoveSdkManager.getInstance(context)
         sharedPref = context.getSharedPreferences(PREF_SHARED_NAME, Context.MODE_PRIVATE)
@@ -176,30 +189,51 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
             .launchIn(this)
     }
 
+    /**
+     * For observing the state of the MOVE SDK.
+     */
     fun sdkState(): LiveData<MoveSdkState> {
         return sdkState
     }
 
+    /**
+     * For observing the trip state of the MOVE SDK.
+     */
     fun sdkTripState(): LiveData<MoveTripState> {
         return tripState
     }
 
+    /**
+     * For observing the user Id.
+     */
     fun userId(): LiveData<String> {
         return userId
     }
 
+    /**
+     * For observing possible errors of the MOVE SDK.
+     */
     fun sdkError(): LiveData<String> {
         return sdkError
     }
 
-    fun configError(): LiveData<MoveConfigurationError> {
-        return configError
-    }
-
+    /**
+     * For observing possible warnings of the MOVE SDK.
+     */
     fun sdkWarning(): LiveData<String> {
         return sdkWarning
     }
 
+    /**
+     * For observing problems with the configuration.
+     */
+    fun configError(): LiveData<MoveConfigurationError> {
+        return configError
+    }
+
+    /**
+     * Update the permission views to the current state.
+     */
     fun updatePermissionViews(activity: Activity?) {
         activity?.let {
             locationPermission.postValue(
@@ -249,6 +283,11 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
         }
     }
 
+    /**
+     * Request the location permission.
+     *
+     * @param activity The activity which requests the permission.
+     */
     fun requestLocationPermission(activity: Activity?) {
         activity?.let {
             if (ContextCompat.checkSelfPermission(
@@ -264,6 +303,11 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
         }
     }
 
+    /**
+     * Request the phone state permission.
+     *
+     * @param activity The activity which requests the permission.
+     */
     fun requestPhoneStatePermission(activity: Activity?) {
         activity?.let {
             if (ContextCompat.checkSelfPermission(
@@ -279,6 +323,11 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
         }
     }
 
+    /**
+     * Request the overlay permission.
+     *
+     * @param activity The activity which requests the permission.
+     */
     fun requestOverlayPermission(activity: Activity?) {
         activity?.let {
             if (!Settings.canDrawOverlays(it)) {
@@ -297,6 +346,11 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
         }
     }
 
+    /**
+     * Request the battery permission.
+     *
+     * @param activity The activity which requests the permission.
+     */
     @SuppressLint("BatteryLife")
     fun requestBatteryPermission(activity: Activity?) {
         activity?.let {
@@ -311,6 +365,12 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
         }
     }
 
+    /**
+     * Check if the battery permission is granted.
+     *
+     * @param context The context of the activity.
+     * @return True if the battery permission is granted, false otherwise.
+     */
     private fun isIgnoringBatteryOptimizations(context: Context?): Boolean {
         context?.let {
             val pm = it.getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -320,6 +380,11 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
         return false
     }
 
+    /**
+     * Request the background location permission for Android 10 and above.
+     *
+     * @param activity The activity which requests the permission.
+     */
     fun requestBackgroundPermission(activity: Activity?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             activity?.let {
@@ -337,6 +402,11 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
         }
     }
 
+    /**
+     * Request the activity permission for Android 10 and above.
+     *
+     * @param activity The activity which requests the permission.
+     */
     fun requestActivityPermission(activity: Activity?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             activity?.let {
@@ -354,6 +424,11 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
         }
     }
 
+    /**
+     * Request the bluetooth permission for Android 12 and above.
+     *
+     * @param activity The activity which requests the permission.
+     */
     fun requestBluetoothPermission(activity: Activity?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             activity?.let {
@@ -371,6 +446,11 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
         }
     }
 
+    /**
+     * Request the notification permission for Android 13 and above.
+     *
+     * @param activity The activity which requests the permission.
+     */
     fun requestNotificationPermission(activity: Activity?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             activity?.let {
@@ -389,28 +469,41 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
         }
     }
 
+    /**
+     * Turn the trip recognition of the MOVE SDK on and store the state in the SharedPreferences.
+     */
     fun turnMoveSdkOn(context: Context) {
         sharedPref.edit().putBoolean(PREF_ENABLED, true).apply()
-
         moveSdkManager.moveSdk?.startAutomaticDetection() ?: run {
             moveSdkManager.setupSdk(context, true)
         }
     }
 
+    /**
+     * Turn the trip recognition of the MOVE SDK off and store the state in the SharedPreferences.
+     */
     fun turnMoveSdkOff() {
         sharedPref.edit().putBoolean(PREF_ENABLED, false).apply()
-
         moveSdkManager.moveSdk?.stopAutomaticDetection()
     }
 
+    /**
+     * Force the MOVE SDK to sync the data with the backend.
+     */
     fun forceSync() {
         moveSdkManager.moveSdk?.synchronizeUserData()
     }
 
+    /**
+     * Request the MOVE SDK call for assistance through the backend.
+     */
     fun requestCallAssistance() {
         moveSdkManager.callAssistance()
     }
 
+    /**
+     * Request the MOVE SDK to update the configuration.
+     */
     fun requestMoveConfigUpdate() {
         moveSdkManager.updateConfig()
     }

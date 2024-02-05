@@ -25,8 +25,16 @@ import io.dolphin.move.sample.ui.MoveSampleFragment
 
 const val PERMISSIONS_REQUEST_CODE = 123
 
+/**
+ * The MoveSampleActivity which contains the MoveSampleFragment.
+ */
 class MoveSampleActivity : AppCompatActivity() {
 
+    /**
+     * Create the MoveSampleActivity, set the toolbar and add the MoveSampleFragment.
+     *
+     * @param savedInstanceState The saved instance state.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.move_sample_activity)
@@ -39,6 +47,13 @@ class MoveSampleActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Handle the result of the permissions request reentering the app.
+     *
+     * @param requestCode The integer request code originally supplied to startActivityForResult(), allowing you to identify who this result came from.
+     * @param resultCode The integer result code returned by the child activity through its setResult().
+     * @param data An Intent, which can return result data to the caller (various data can be attached to Intent "extras").
+     */
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == PERMISSIONS_REQUEST_CODE) {
@@ -46,6 +61,13 @@ class MoveSampleActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Handle the result of the permissions request.
+     *
+     * @param requestCode The request code passed in requestPermissions(Activity, String[], int)
+     * @param permissions The requested permissions. Never null.
+     * @param grantResults The grant results for the corresponding permissions which is either PackageManager.PERMISSION_GRANTED or PackageManager.PERMISSION_DENIED. Never null.
+     */
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -66,8 +88,10 @@ class MoveSampleActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Notify the MOVE SDK that the app has handled the occurred errors.
+     */
     private fun notifyPermissionState() {
-        // Tell MoveSdk that the app has handled the occurred errors.
         MoveSdkManager.getInstance(this).moveSdk?.resolveError()
     }
 }

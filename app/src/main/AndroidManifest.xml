@@ -3,12 +3,39 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="io.dolphin.move.sample">
 
+    <!--
+        IMPORTANT: see https://docs.movesdk.com/move-platform/sdk/appendix/android/permission-handling/permission-overview
+    -->
+
+    <!-- To perform network operations in your application. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Mode of Transport: DRIVING, CYCLING, WALKING -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
+    <!--
+        Background Location Permission
+        Note: Since SDK 2.6: if backgroundLocationPermissionMandatory in MoveOptions is true
+        the permission ACCESS_BACKGROUND_LOCATION is mandatory else this permission is optional.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- DFD - Distraction-Free Driving -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!--
+        see https://docs.movesdk.com/move-platform/sdk/appendix/android/notification-managment/
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+        BDD - Bluetooth Device Discovery
+        see https://docs.movesdk.com/move-platform/sdk/models/listeners-callbacks#device-discovery-listener
+    -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <application
         android:name=".MoveSampleApplication"
