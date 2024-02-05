@@ -152,7 +152,8 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
                     // Authentication is valid. Latest MoveAuth provided.
                 }
                 is MoveAuthState.INVALID -> {
-                    // Authentication is invalid.
+                    // Shutdown the MOVE SDK and if necessary the host app has to register the user again.
+                    moveSdk?.shutdown()
                 }
                 is MoveAuthState.UNKNOWN -> {
                     // The SDK authorization state when SDK is uninitialized.

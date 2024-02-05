@@ -11,8 +11,9 @@ The MOVE SDK Sample App shows you how to integrate our SDK very easily into your
         maven {
             url "https://dolphin.jfrog.io/artifactory/move-sdk-libs-release"
         }
-4. In the app module build.gradle file replace the Bearer value (MOVE_API_KEY) with the product API Key you received.
-5. Clean, build and run the application on your device
+4. In the app module build.gradle file please replace the value "1234" (MOVE_API_PROJECT) with the PROJECT ID you received. You can find this also in the [MOVE Dashboard](https://dashboard.movesdk.com/admin/sdkConfig).
+5. In the same app module build.gradle file please replace the value "YOUR_API_KEY" (MOVE_API_KEY) with the API Key you received. You can find this also in the [MOVE Dashboard](https://dashboard.movesdk.com/admin/sdkConfig/keys).
+6. Clean, build and run the application on your device.
 
 Reference: [MOVE Android SDK documentation](https://docs.movesdk.com/)
 
@@ -20,9 +21,9 @@ Reference: [MOVE Android SDK documentation](https://docs.movesdk.com/)
 MoveSampleApplication and MoveSdkManager are recommended starting points for embedding the SDK in an already existing or new project.
 
 ### Authorization
-After contacting us and getting a product API key, use it to fetch a MoveAuth from the Move Server (see fun registerUser(..) / MoveBackendApi). MoveAuth object will be passed to the SDK on initialization (see fun configureMoveSdk(moveAuth: MoveAuth) / MoveSdkManager) and will be used by the SDK to authenticate its services.
+After contacting us and getting a PROJECT ID, use it to fetch a MoveAuth from the Move Server (see fun registerUser(..) / MoveBackendApi). MoveAuth object will be passed to the SDK on initialization (see fun configureMoveSdk(moveAuth: MoveAuth) / MoveSdkManager) and will be used by the SDK to authenticate its services.
 
-If the provided MoveAuth was invalid, the SDK will not initialize (see MoveSdk.AuthStateUpdateListener / see MoveSdkManager). Check Initialization for more details about possible outcomes.
+If the provided MoveAuth was invalid, the MOVE SDK should be shutdown (see MoveSdk.AuthStateUpdateListener / see MoveSdkManager). Check Initialization for more details about possible outcomes.
 
 ### Configuration
 With MoveSdk.Builder (see fun configureMoveSdk(moveAuth: MoveAuth) / MoveSdkManager) you are able to configure which of the licensed Move services should be enabled.
