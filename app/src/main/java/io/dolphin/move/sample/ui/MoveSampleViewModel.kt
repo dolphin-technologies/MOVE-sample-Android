@@ -35,6 +35,7 @@ import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import io.dolphin.move.MoveAssistanceCallStatus
+import io.dolphin.move.MoveAuthResult
 import io.dolphin.move.MoveConfigurationError
 import io.dolphin.move.MoveSdkState
 import io.dolphin.move.MoveTripState
@@ -75,6 +76,7 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
     private val userId: MediatorLiveData<String> = MediatorLiveData<String>()
     private val sdkState: MutableLiveData<MoveSdkState> = MutableLiveData<MoveSdkState>()
     private val tripState: MutableLiveData<MoveTripState> = MutableLiveData<MoveTripState>()
+    internal val authState: MutableLiveData<MoveAuthResult> = MutableLiveData<MoveAuthResult>()
 
     internal val locationPermission: MutableLiveData<Boolean> = MutableLiveData<Boolean>(false)
     internal val backgroundPermission: MutableLiveData<Boolean> = MutableLiveData<Boolean>(false)
@@ -145,6 +147,13 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
         moveSdkManager.fetchTripStateFlow()
             .onEach {
                 tripState.postValue(it)
+            }
+            .flowOn(Dispatchers.IO)
+            .launchIn(this)
+
+        moveSdkManager.fetchAuthCodeFlow()
+            .onEach {
+                authState.postValue(it)
             }
             .flowOn(Dispatchers.IO)
             .launchIn(this)

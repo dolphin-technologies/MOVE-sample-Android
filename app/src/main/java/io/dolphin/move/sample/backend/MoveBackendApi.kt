@@ -22,9 +22,9 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.Header
-import retrofit2.http.POST
+import retrofit2.http.Query
 
 /**
  * API for creating a user on the MOVE Backend.
@@ -36,13 +36,13 @@ interface MoveBackendApi {
     /**
      * Register a user on the MOVE Backend by using retrofit.
      *
-     * @param registerRequest The request body containing the user's data.
+     * @param userId An unique user id within your project.
      * @param authHeader The auth header containing the API key.
      * @return The response body containing the user's data.
      */
-    @POST("/v20/auth/register")
-    fun registerUser(
-        @Body registerRequest: RegisterRequest,
+    @GET("/v20/user/authcode")
+    fun registerUserWithAuthCode(
+        @Query("userId") userId: String,
         @Header("Authorization") authHeader: String?
     ): Call<RegisterResponse>
 
@@ -52,7 +52,7 @@ interface MoveBackendApi {
         /**
          * Create the MoveBackendApi.
          *
-         * @return The the MoveBackendApi.
+         * @return The the MoveBackendApi .
          */
         fun create(): MoveBackendApi {
             val interceptor = HttpLoggingInterceptor()

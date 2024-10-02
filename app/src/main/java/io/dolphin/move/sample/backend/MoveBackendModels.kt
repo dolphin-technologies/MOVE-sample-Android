@@ -24,21 +24,8 @@ package io.dolphin.move.sample.backend
  */
 
 /**
- * The RegisterRequest with the userId which will be send to the backend.
- */
-data class RegisterRequest(
-    var userId: String
-)
-
-/**
- * The RegisterResponse with the accessToken, refreshToken, userId, audience,
- * installationId and projectId which will be received from the backend.
+ * The RegisterResponse with authCode which will be received from the backend.
  */
 data class RegisterResponse(
-    var accessToken: String, // accessToken ... allows communication with MOVE SDK backend
-    var refreshToken: String, // refreshToken ... allows app to renew access token
-    var userId: String, // userId ... to identify the user within the project.
-    var audience: String, // audience ... not used in this example.
-    var installationId: String, // installationId ... not used in this example.
-    var projectId: String // projectId ... to identify the project.
+    var authCode: String // authCode ... The authentication code for this project for user with userId.
 )
