@@ -24,9 +24,8 @@ class MoveSampleApplication : Application() {
     companion object {
         const val PREF_SHARED_NAME = "movesample"
 
-        const val PREF_ACCESS_TOKEN = "accessToken"
-        const val PREF_REFRESH_TOKEN = "refreshToken"
         const val PREF_USER_ID = "userId"
+        const val PREF_AUTH_CODE = "authCode"
         const val PREF_ENABLED = "enabled"
     }
 

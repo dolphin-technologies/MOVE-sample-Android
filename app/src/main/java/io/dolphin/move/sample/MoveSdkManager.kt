@@ -28,12 +28,10 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import io.dolphin.move.*
-import io.dolphin.move.sample.MoveSampleApplication.Companion.PREF_ACCESS_TOKEN
-import io.dolphin.move.sample.MoveSampleApplication.Companion.PREF_REFRESH_TOKEN
+import io.dolphin.move.sample.MoveSampleApplication.Companion.PREF_AUTH_CODE
 import io.dolphin.move.sample.MoveSampleApplication.Companion.PREF_SHARED_NAME
 import io.dolphin.move.sample.MoveSampleApplication.Companion.PREF_USER_ID
 import io.dolphin.move.sample.backend.MoveBackendApi
-import io.dolphin.move.sample.backend.RegisterRequest
 import io.dolphin.move.sample.backend.RegisterResponse
 import io.dolphin.move.sample.thirdparty.SingletonHolder
 import kotlinx.coroutines.CoroutineScope
@@ -57,7 +55,6 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
         private const val TAG = "MoveSdkManager"
     }
 
-    private var moveAuth: MoveAuth? = null
     internal var moveSdk: MoveSdk? = null
 
     private val moveStateFlow = MutableStateFlow<MoveSdkState>(MoveSdkState.Uninitialised)
@@ -67,6 +64,7 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
     private val moveErrorsFlow = MutableStateFlow<List<MoveServiceFailure>>(emptyList())
     private val moveWarningsFlow = MutableStateFlow<List<MoveServiceWarning>>(emptyList())
     private val assistanceStateFlow = MutableStateFlow<MoveAssistanceCallStatus?>(null)
+    private val authCodeFlow = MutableStateFlow<MoveAuthResult?>(null)
 
 
     fun fetchMoveStateFlow(): StateFlow<MoveSdkState> {
@@ -91,6 +89,10 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
 
     fun fetchAssistanceStateFlow(): StateFlow<MoveAssistanceCallStatus?> {
         return assistanceStateFlow
+    }
+
+    fun fetchAuthCodeFlow(): StateFlow<MoveAuthResult?> {
+        return authCodeFlow
     }
 
     private var initListener: MoveSdk.InitializeListener = object : MoveSdk.InitializeListener {
@@ -163,6 +165,17 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
         }
     }
 
+    private val authCodeListener = object : MoveSdk.MoveAuthCallback {
+        // Triggers whenever the MoveAuthState changes.
+        override fun onResult(result: MoveAuthResult) {
+            authCodeFlow.value = result
+            Log.i(
+                TAG,
+                "authCodeListener: ${result.status} ${result.description}"
+            )
+        }
+    }
+
     private val warningListener = object : MoveSdk.MoveWarningListener {
         override fun onMoveWarning(serviceWarnings: List<MoveServiceWarning>) {
             moveWarningsFlow.value = serviceWarnings
@@ -200,7 +213,7 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
     }
 
     @SuppressLint("MissingPermission")
-    private fun configureMoveSdk(moveAuth: MoveAuth) {
+    private fun configureMoveSdk(authCode: String) {
         // Let's configure the MoveSdk and register all the listeners for your usage.
         // see -> MoveSdk Wiki / Initializing the MOVE SDK
         moveSdk = MoveSdk.init(context)
@@ -219,9 +232,9 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
             setServiceWarningListener(warningListener)
             setServiceErrorListener(errorListener)
             consoleLogging(true)
-            allowMockLocations(BuildConfig.DEBUG) // mock location not recommended for use in production
         }
-        MoveSdk.setup(moveAuth, moveConfig, start = true)
+        Log.i(TAG, "configureMoveSdk: $authCode")
+        MoveSdk.setup(authCode, moveConfig, start = true, callback = authCodeListener)
     }
 
     private fun createMoveConfig(): MoveConfig {
@@ -329,8 +342,8 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
         // Let's fetch the necessary values from the MOVE backend.
         // In this sample app we use retrofit.
         // see -> https://developer.android.com/training/basics/network-ops/connecting
-        val apiInterface = MoveBackendApi.create().registerUser(
-            registerRequest = RegisterRequest(userId),
+        val apiInterface = MoveBackendApi.create().registerUserWithAuthCode (
+            userId = userId,
             authHeader = "Bearer ${BuildConfig.MOVE_API_KEY}"
         )
 
@@ -343,38 +356,20 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
                 // Handle the response from the MOVE backend.
                 val responseBody = response.body()
                 if (responseBody != null) {
-                    val projectId = responseBody.projectId.toLong()
-                    val accessToken = responseBody.accessToken
-                    val refreshToken = responseBody.refreshToken
-
-                    if (projectId != BuildConfig.MOVE_API_PROJECT) {
-                        throw IllegalArgumentException(
-                            "ProjectID mismatch ($projectId vs ${BuildConfig.MOVE_API_PROJECT})" +
-                                    ", please ensure that you are using the correct ProjectID and API Key"
-                        )
-                    }
-
                     val sharedPref: SharedPreferences = context.getSharedPreferences(
                         PREF_SHARED_NAME,
                         Context.MODE_PRIVATE
                     )
                     val editor = sharedPref.edit()
+                    val authCode = responseBody.authCode
                     editor.putString(PREF_USER_ID, userId)
-                    editor.putString(PREF_ACCESS_TOKEN, accessToken)
-                    editor.putString(PREF_REFRESH_TOKEN, refreshToken)
                     editor.apply()
+                    editor.putString(PREF_AUTH_CODE, authCode)
+                    editor.commit()
 
-                    moveAuth = MoveAuth(
-                        BuildConfig.MOVE_API_PROJECT,
-                        userId,
-                        accessToken,
-                        refreshToken
-                    ).also {
-                        // if we have already a SDK instance, we can just update authentication
-                        moveSdk?.updateAuth(it)
-                        // otherwise we just start it from scratch
-                            ?: initSdk(it)
-                    }
+                    Log.i(TAG, "registerUser: $authCode")
+                    moveSdk?.setup(authCode, createMoveConfig(), start = true, callback = authCodeListener)
+
                 } else {
                     Toast.makeText(context, "Check MOVE_API_KEY!", Toast.LENGTH_LONG)
                         .show()
@@ -395,23 +390,13 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
     fun setupSdk(context: Context, canRegister: Boolean = false) {
         val sharedPref = context.getSharedPreferences(PREF_SHARED_NAME, Context.MODE_PRIVATE)
         val userId = sharedPref.getString(PREF_USER_ID, "")
-        val accessToken = sharedPref.getString(PREF_ACCESS_TOKEN, "")
-        val refreshToken = sharedPref.getString(PREF_REFRESH_TOKEN, "")
-        if (!userId.isNullOrEmpty() && !accessToken.isNullOrEmpty() && !refreshToken.isNullOrEmpty()) {
+        val authCode = sharedPref.getString(PREF_AUTH_CODE, "")
+        if (!userId.isNullOrEmpty() && !authCode.isNullOrEmpty()) {
             // We have all necessary data to initialize the MoveSdk.
-            val moveAuth =
-                MoveAuth(BuildConfig.MOVE_API_PROJECT, userId, accessToken, refreshToken)
-            initSdk(moveAuth)
+            configureMoveSdk(authCode)
         } else if (canRegister) {
             // No SDK data available -> let's get the data from the backend
             registerUser(context)
-        }
-    }
-
-    fun initSdk(moveAuth: MoveAuth? = null) {
-        moveAuth?.let {
-            // if there is no authentication data passed, it will end in an configuration error
-            configureMoveSdk(moveAuth)
         }
     }
 
