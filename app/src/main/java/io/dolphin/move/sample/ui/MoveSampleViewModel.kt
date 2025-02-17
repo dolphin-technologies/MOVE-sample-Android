@@ -37,6 +37,7 @@ import androidx.lifecycle.ViewModel
 import io.dolphin.move.MoveAssistanceCallStatus
 import io.dolphin.move.MoveAuthResult
 import io.dolphin.move.MoveConfigurationError
+import io.dolphin.move.MoveHealthScore
 import io.dolphin.move.MoveSdkState
 import io.dolphin.move.MoveTripState
 import io.dolphin.move.sample.BuildConfig
@@ -76,7 +77,7 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
     private val userId: MediatorLiveData<String> = MediatorLiveData<String>()
     private val sdkState: MutableLiveData<MoveSdkState> = MutableLiveData<MoveSdkState>()
     private val tripState: MutableLiveData<MoveTripState> = MutableLiveData<MoveTripState>()
-    internal val authState: MutableLiveData<MoveAuthResult> = MutableLiveData<MoveAuthResult>()
+    private val authState: MutableLiveData<MoveAuthResult> = MutableLiveData<MoveAuthResult>()
 
     internal val locationPermission: MutableLiveData<Boolean> = MutableLiveData<Boolean>(false)
     internal val backgroundPermission: MutableLiveData<Boolean> = MutableLiveData<Boolean>(false)
@@ -92,6 +93,7 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
     private val sdkError: MutableLiveData<String> = MutableLiveData<String>()
     private val sdkWarning: MutableLiveData<String> = MutableLiveData<String>()
     private val configError: SingleLiveEvent<MoveConfigurationError> = SingleLiveEvent()
+    private val healthScore: MutableLiveData<MoveHealthScore> = MutableLiveData<MoveHealthScore>()
 
     init {
         moveSdkActivation.addSource(sdkState) {
@@ -194,6 +196,11 @@ class MoveSampleViewModel : ViewModel(), CoroutineScope {
         moveSdkManager.fetchAssistanceStateFlow()
             .filterNotNull()
             .onEach(assistanceState::postValue)
+            .flowOn(Dispatchers.IO)
+            .launchIn(this)
+
+        moveSdkManager.fetchHealthScoreFlow()
+            .onEach(healthScore::postValue)
             .flowOn(Dispatchers.IO)
             .launchIn(this)
     }
