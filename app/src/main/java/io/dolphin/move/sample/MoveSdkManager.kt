@@ -65,6 +65,7 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
     private val moveWarningsFlow = MutableStateFlow<List<MoveServiceWarning>>(emptyList())
     private val assistanceStateFlow = MutableStateFlow<MoveAssistanceCallStatus?>(null)
     private val authCodeFlow = MutableStateFlow<MoveAuthResult?>(null)
+    private val healthScoreFlow = MutableStateFlow<MoveHealthScore?>(null)
 
 
     fun fetchMoveStateFlow(): StateFlow<MoveSdkState> {
@@ -93,6 +94,10 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
 
     fun fetchAuthCodeFlow(): StateFlow<MoveAuthResult?> {
         return authCodeFlow
+    }
+
+    fun fetchHealthScoreFlow(): StateFlow<MoveHealthScore?> {
+        return healthScoreFlow
     }
 
     private var initListener: MoveSdk.InitializeListener = object : MoveSdk.InitializeListener {
@@ -208,6 +213,13 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
         }
     }
 
+    private val healthScoreListener = object : MoveSdk.MoveHealthScoreListener {
+        override fun onMoveHealthScoreChanged(score: MoveHealthScore) {
+            healthScoreFlow.value = score
+            Log.d("MoveHealthScore", "e.g. Battery ${score.battery}")
+        }
+    }
+
     init {
         Log.i(TAG, "Running MOVE SDK version ${MoveSdk.version}")
     }
@@ -231,6 +243,7 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
             initializationListener(initListener)
             setServiceWarningListener(warningListener)
             setServiceErrorListener(errorListener)
+            setMoveHealthScoreListener(healthScoreListener)
             consoleLogging(true)
         }
         Log.i(TAG, "configureMoveSdk: $authCode")
