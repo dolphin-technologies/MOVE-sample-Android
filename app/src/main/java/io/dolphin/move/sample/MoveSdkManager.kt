@@ -255,23 +255,22 @@ class MoveSdkManager private constructor(private val context: Context) : Corouti
         val moveDetectionServices: MutableSet<MoveDetectionService> = mutableSetOf()
 
         val drivingServices: MutableSet<DrivingService> = mutableSetOf()
-        val walkingServices: MutableSet<WalkingService> = mutableSetOf()
         //val otherServices: MutableSet<OtherService> = mutableSetOf()
 
         drivingServices.add(DrivingService.DrivingBehaviour)
         drivingServices.add(DrivingService.DistractionFreeDriving)
 
-        walkingServices.add(WalkingService.Location)
-
-        //otherServices.add(OtherService.PointsOfInterest)
-        //otherServices.add(OtherService.Crash)
-        //otherServices.add(OtherService.AssistanceCall)
+        // Walking location is  experimental feature and not available at this moment.
+        // val walkingServices: MutableSet<WalkingService> = mutableSetOf()
+        // walkingServices.add(WalkingService.Location)
 
         moveDetectionServices.add(MoveDetectionService.Driving(drivingServices = drivingServices.toList()))
-        moveDetectionServices.add(MoveDetectionService.Walking(walkingServices = walkingServices.toList()))
+        moveDetectionServices.add(MoveDetectionService.Walking(walkingServices = emptyList()))
 
         moveDetectionServices.add(MoveDetectionService.Cycling)
-        moveDetectionServices.add(MoveDetectionService.Places)
+
+        // Places is experimental feature and not available at this moment.
+        // moveDetectionServices.add(MoveDetectionService.Places)
         moveDetectionServices.add(MoveDetectionService.PublicTransport)
         moveDetectionServices.add(MoveDetectionService.PointsOfInterest)
         moveDetectionServices.add(MoveDetectionService.AutomaticImpactDetection)
